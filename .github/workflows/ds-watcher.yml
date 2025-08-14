@@ -1,0 +1,42 @@
+name: DS Watcher (Email)
+
+on:
+  schedule: [{ cron: "*/5 * * * *" }]   # 5분마다 (UTC 기준)
+  workflow_dispatch:
+
+concurrency:
+  group: ds-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # pnpm 10.14.0 깔끔 설치(권장)
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+          run_install: true
+
+      # TypeScript 파일을 tsx로 바로 실행
+      - run: pnpm run run:once
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+          FIGMA_FILE_KEY: ${{ secrets.FIGMA_FILE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          MAIL_SUBJECT_PREFIX: ${{ secrets.MAIL_SUBJECT_PREFIX }}

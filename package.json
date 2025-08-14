@@ -1,0 +1,26 @@
+{
+  "name": "figma-design-system-watcher",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "tsx -r dotenv/config scripts/figma-design-system-watcher-email.ts",
+    "run:once": "tsx scripts/figma-design-system-watcher-email.ts",
+    "check": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/scripts/figma-design-system-watcher-email.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.14"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/nodemailer": "^6.4.17",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.4"
+  }
+}
