@@ -2,7 +2,7 @@ name: DS Watcher (Email)
 
 on:
   schedule: 
-    - cron: "*/5 * * * *"   # 5분마다 실행 (UTC)
+    - cron: "0 */1 * * *"   # 1시간마다 실행 (UTC)
   workflow_dispatch:        # 수동 실행 가능
 
 concurrency:
