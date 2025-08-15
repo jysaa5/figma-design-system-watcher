@@ -26,8 +26,8 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.14.0   # 로컬과 맞추기
-          run_install: false # 설치는 아래에서 명시적으로
+          version: 10.14.0 
+          run_install: true
 
       - name: Show Node & pnpm versions
         run: |
