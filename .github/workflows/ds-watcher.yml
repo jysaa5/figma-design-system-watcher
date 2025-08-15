@@ -1,7 +1,7 @@
 name: DS Watcher (Email)
 
 on:
-  schedule: [{ cron: "*/5 * * * *" }]   # 5분마다 (UTC 기준)
+  schedule: [{ cron: "*/5 * * * *" }]   # 5분마다 (UTC)
   workflow_dispatch:
 
 concurrency:
@@ -14,21 +14,39 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      # pnpm 10.14.0 깔끔 설치(권장)
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 10.14.0
-          run_install: true
+          version: 10.14.0   # 로컬과 맞추기
+          run_install: false # 설치는 아래에서 명시적으로
 
-      # TypeScript 파일을 tsx로 바로 실행
-      - run: pnpm run run:once
+      - name: Show Node & pnpm versions
+        run: |
+          node -v
+          pnpm -v || echo "pnpm not found"
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile || pnpm install
+          pnpm list --depth 0
+
+      - name: Check project files
+        run: |
+          ls -la
+          ls -la scripts
+          cat package.json
+
+      - name: Run DS Watcher (Email)
+        run: pnpm run run:once
         env:
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
           FIGMA_FILE_KEY: ${{ secrets.FIGMA_FILE_KEY }}
