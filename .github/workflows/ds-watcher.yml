@@ -22,17 +22,19 @@ jobs:
         with:
           fetch-depth: 1    # 최신 커밋만 가져오기 (속도 향상)
 
+      # 🔧 수정: pnpm을 먼저 설치
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '9.12.0'  # 안정적인 버전 사용
+          run_install: false # 수동으로 설치할 예정
+
+      # 🔧 수정: pnpm 설치 후 Node.js 설정 (캐시 포함)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'     # pnpm 캐시 설정
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: '9.12.0'  # 안정적인 최신 버전 사용
-          run_install: false # 수동으로 설치할 예정
+          cache: 'pnpm'     # 이제 pnpm이 설치되어 있음
 
       - name: Verify environment
         run: |
@@ -68,7 +70,12 @@ jobs:
       - name: Check package.json scripts
         run: |
           echo "Available scripts:"
-          cat package.json | jq '.scripts' || echo "No scripts found or jq not available"
+          if command -v jq &> /dev/null; then
+            cat package.json | jq '.scripts'
+          else
+            echo "Scripts section from package.json:"
+            grep -A 10 '"scripts"' package.json || echo "No scripts found"
+          fi
 
       - name: Run DS Watcher
         run: |
