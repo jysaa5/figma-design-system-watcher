@@ -1,8 +1,9 @@
 name: DS Watcher (Email)
 
 on:
-  schedule: [{ cron: "*/5 * * * *" }]   # 5분마다 (UTC)
-  workflow_dispatch:
+  schedule: 
+    - cron: "*/5 * * * *"   # 5분마다 실행 (UTC)
+  workflow_dispatch:        # 수동 실행 가능
 
 concurrency:
   group: ds-watcher
@@ -11,50 +12,103 @@ concurrency:
 jobs:
   watch:
     runs-on: ubuntu-latest
+    timeout-minutes: 10     # 10분 타임아웃 설정
     permissions:
       contents: read
+      
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1    # 최신 커밋만 가져오기 (속도 향상)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'     # pnpm 캐시 설정
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.14.0 
-          run_install: true
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
+          version: '9.12.0'  # 안정적인 최신 버전 사용
+          run_install: false # 수동으로 설치할 예정
 
-      - name: Show Node & pnpm versions
+      - name: Verify environment
         run: |
-          node -v
-          pnpm -v || echo "pnpm not found"
+          echo "Node version: $(node --version)"
+          echo "pnpm version: $(pnpm --version)"
+          echo "Working directory: $(pwd)"
+          echo "Current user: $(whoami)"
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile || pnpm install
-          pnpm list --depth 0
+          # pnpm-lock.yaml이 있으면 frozen-lockfile 사용, 없으면 일반 설치
+          if [ -f pnpm-lock.yaml ]; then
+            echo "Found pnpm-lock.yaml, using frozen lockfile"
+            pnpm install --frozen-lockfile
+          else
+            echo "No pnpm-lock.yaml found, installing normally"
+            pnpm install
+          fi
 
-      - name: Check project files
+      - name: Verify installation
         run: |
+          echo "Installed packages:"
+          pnpm list --depth 0 || echo "Failed to list packages"
+          echo ""
+          echo "Project structure:"
           ls -la
-          ls -la scripts
-          cat package.json
+          echo ""
+          if [ -d "scripts" ]; then
+            echo "Scripts directory:"
+            ls -la scripts/
+          fi
 
-      - name: Run DS Watcher (Email)
-        run: pnpm run run:once
+      - name: Check package.json scripts
+        run: |
+          echo "Available scripts:"
+          cat package.json | jq '.scripts' || echo "No scripts found or jq not available"
+
+      - name: Run DS Watcher
+        run: |
+          echo "Starting DS Watcher..."
+          pnpm run run:once
         env:
+          # Figma 설정
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
           FIGMA_FILE_KEY: ${{ secrets.FIGMA_FILE_KEY }}
+          
+          # SMTP 설정
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          
+          # 메일 설정
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
           MAIL_SUBJECT_PREFIX: ${{ secrets.MAIL_SUBJECT_PREFIX }}
+          
+          # 추가 환경 변수 (필요시)
+          NODE_ENV: production
+          TZ: Asia/Seoul
+
+      - name: Upload logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: watcher-logs-${{ github.run_number }}
+          path: |
+            *.log
+            logs/
+            .next/
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ DS Watcher failed at $(date)"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Commit: ${{ github.sha }}"
